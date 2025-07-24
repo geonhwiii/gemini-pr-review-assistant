@@ -65,11 +65,19 @@ msg() {
                 "performance_issues") echo "⚡ Performance Issues:" ;;
                 "code_quality") echo "✨ Code Quality:" ;;
                 "suggestions") echo "💡 Suggestions:" ;;
-                "gh_not_installed") echo "⚠️  GitHub CLI is not installed. Install it to enable PR integration:
-   brew install gh  # or visit https://cli.github.com" ;;
+                "gh_not_installed") echo "❌ GitHub CLI is required but not installed. Please install it:
+   
+   macOS: brew install gh
+   Other: https://cli.github.com/manual/installation
+   
+   After installation, authenticate with: gh auth login" ;;
+                "gh_not_authenticated") echo "❌ GitHub CLI is not authenticated. Please login:
+   
+   gh auth login
+   
+   Follow the prompts to authenticate with your GitHub account." ;;
                 "no_pr_found") echo "📍 No PR found for current branch. Creating review based on branch diff." ;;
                 "pr_found") echo "📍 Found PR #$param1: $param2" ;;
-                "debug_pr_search") echo "🔍 Searching for PR for branch: $param1" ;;
                 "posting_comment") echo "📝 Posting review as PR comment..." ;;
                 "comment_posted") echo "✅ Review comment posted to PR successfully!" ;;
                 "comment_failed") echo "❌ Failed to post comment to PR." ;;
@@ -124,11 +132,19 @@ msg() {
                 "performance_issues") echo "⚡ 성능 이슈:" ;;
                 "code_quality") echo "✨ 코드 품질:" ;;
                 "suggestions") echo "💡 제안사항:" ;;
-                "gh_not_installed") echo "⚠️  GitHub CLI가 설치되어 있지 않습니다. PR 연동을 위해 설치해주세요:
-   brew install gh  # 또는 https://cli.github.com 방문" ;;
+                "gh_not_installed") echo "❌ GitHub CLI가 필수이지만 설치되어 있지 않습니다. 설치해주세요:
+   
+   macOS: brew install gh  
+   기타: https://cli.github.com/manual/installation
+   
+   설치 후 인증: gh auth login" ;;
+                "gh_not_authenticated") echo "❌ GitHub CLI 인증이 필요합니다. 로그인해주세요:
+   
+   gh auth login
+   
+   안내에 따라 GitHub 계정으로 인증하세요." ;;
                 "no_pr_found") echo "📍 현재 브랜치에 대한 PR을 찾을 수 없습니다. 브랜치 diff 기반으로 리뷰를 생성합니다." ;;
                 "pr_found") echo "📍 PR #$param1 발견: $param2" ;;
-                "debug_pr_search") echo "🔍 브랜치에 대한 PR 검색 중: $param1" ;;
                 "posting_comment") echo "📝 PR 댓글로 리뷰를 작성 중입니다..." ;;
                 "comment_posted") echo "✅ PR에 리뷰 댓글이 성공적으로 작성되었습니다!" ;;
                 "comment_failed") echo "❌ PR 댓글 작성에 실패했습니다." ;;
@@ -294,13 +310,13 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --version|-v)
-            echo "gemini-pr-review-assistant v1.1.4"
+            echo "gemini-pr-review-assistant v2.0.0"
             echo "AI-powered PR review and analysis using Gemini CLI"
             echo ""
             echo "Dependencies:"
             echo "  - Node.js >=16.0.0"
-            echo "  - @google/gemini-cli >=0.1.0 (required)"
-            echo "  - gh (GitHub CLI) - optional for PR integration & comments"
+            echo "  - gh (GitHub CLI) - required"
+            echo "  - @google/gemini-cli >=0.1.0 - required"
             echo ""
             echo "Repository: https://github.com/geonhwiii/gemini-pr-review-assistant"
             echo "npm: https://www.npmjs.com/package/gemini-pr-review-assistant"
@@ -421,16 +437,22 @@ $review_content
     return 1
 }
 
+# GitHub CLI 설치 확인 (필수)
+if ! command -v gh >/dev/null 2>&1; then
+    echo -e "${RED}$(msg "gh_not_installed")${NC}"
+    exit 1
+fi
+
+# GitHub CLI 인증 확인 (필수)
+if ! gh auth status >/dev/null 2>&1; then
+    echo -e "${RED}$(msg "gh_not_authenticated")${NC}"
+    exit 1
+fi
+
 # Gemini CLI 설치 확인
 if ! command -v gemini >/dev/null 2>&1; then
     echo -e "${YELLOW}$(msg "gemini_not_installed")${NC}"
     exit 1
-fi
-
-# GitHub CLI 설치 확인 (옵션)
-if [ "$POST_COMMENT" = true ] && ! command -v gh >/dev/null 2>&1; then
-    echo -e "${YELLOW}$(msg "gh_not_installed")${NC}"
-    echo ""
 fi
 
 # 현재 브랜치 확인
@@ -456,32 +478,9 @@ if [ -z "$TARGET_BRANCH" ]; then
     TARGET_BRANCH="$CURRENT_BRANCH"
 fi
 
-# DEBUG: 브랜치 정보 출력
-echo -e "${YELLOW}[DEBUG] TARGET_BRANCH value: '$TARGET_BRANCH'${NC}"
-echo -e "${YELLOW}[DEBUG] git branch --show-current: '$(git branch --show-current 2>/dev/null)'${NC}"
-echo -e "${YELLOW}[DEBUG] git rev-parse --abbrev-ref HEAD: '$(git rev-parse --abbrev-ref HEAD 2>/dev/null)'${NC}"
-
 echo -e "${CYAN}$(msg "current_branch" "$TARGET_BRANCH")${NC}"
 
 # PR 정보 가져오기 시도
-echo -e "${YELLOW}[DEBUG] Checking GitHub CLI availability...${NC}"
-if command -v gh >/dev/null 2>&1; then
-    echo -e "${YELLOW}[DEBUG] GitHub CLI found, checking authentication...${NC}"
-    gh auth status 2>/dev/null || echo -e "${YELLOW}[DEBUG] GitHub CLI not authenticated${NC}"
-    
-    echo -e "${YELLOW}[DEBUG] Searching for PR with branch: '$TARGET_BRANCH'${NC}"
-    echo -e "${YELLOW}[DEBUG] Method 1 - gh pr view (current branch):${NC}"
-    gh pr view --json number,title,body 2>&1 | head -3
-    
-    echo -e "${YELLOW}[DEBUG] Method 2 - gh pr list --head '$TARGET_BRANCH':${NC}"
-    gh pr list --head "$TARGET_BRANCH" --json number,title,body --limit 1 2>&1 | head -3
-    
-    echo -e "${YELLOW}[DEBUG] Method 3 - gh pr list --head 'origin/$TARGET_BRANCH':${NC}"
-    gh pr list --head "origin/$TARGET_BRANCH" --json number,title,body --limit 1 2>&1 | head -3
-else
-    echo -e "${YELLOW}[DEBUG] GitHub CLI not found${NC}"
-fi
-
 if get_pr_info "$TARGET_BRANCH"; then
     echo -e "${CYAN}$(msg "pr_found" "$PR_NUMBER" "$PR_TITLE")${NC}"
 else

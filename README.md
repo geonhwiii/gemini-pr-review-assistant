@@ -22,17 +22,19 @@ Gemini PR Review Assistant is a command-line tool that leverages Google's Gemini
 
 ### Prerequisites
 
+**All of the following are required:**
+
 1. **Node.js** (>=16.0.0)
-2. **Gemini CLI** - Install and authenticate:
+2. **GitHub CLI** - Install and authenticate:
+   ```bash
+   brew install gh  # macOS
+   # Visit https://cli.github.com for other platforms
+   gh auth login    # Authenticate with GitHub (required)
+   ```
+3. **Gemini CLI** - Install and authenticate:
    ```bash
    npm install -g @google/gemini-cli
    gemini # Follow authentication prompts
-   ```
-3. **GitHub CLI** (optional, for PR integration):
-   ```bash
-   brew install gh  # macOS
-   # or visit https://cli.github.com for other platforms
-   gh auth login    # Authenticate with GitHub
    ```
 
 ### Install PR Review Assistant
