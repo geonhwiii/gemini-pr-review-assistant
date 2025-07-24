@@ -294,7 +294,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --version|-v)
-            echo "gemini-pr-review-assistant v1.1.3"
+            echo "gemini-pr-review-assistant v1.1.4"
             echo "AI-powered PR review and analysis using Gemini CLI"
             echo ""
             echo "Dependencies:"
@@ -464,6 +464,24 @@ echo -e "${YELLOW}[DEBUG] git rev-parse --abbrev-ref HEAD: '$(git rev-parse --ab
 echo -e "${CYAN}$(msg "current_branch" "$TARGET_BRANCH")${NC}"
 
 # PR 정보 가져오기 시도
+echo -e "${YELLOW}[DEBUG] Checking GitHub CLI availability...${NC}"
+if command -v gh >/dev/null 2>&1; then
+    echo -e "${YELLOW}[DEBUG] GitHub CLI found, checking authentication...${NC}"
+    gh auth status 2>/dev/null || echo -e "${YELLOW}[DEBUG] GitHub CLI not authenticated${NC}"
+    
+    echo -e "${YELLOW}[DEBUG] Searching for PR with branch: '$TARGET_BRANCH'${NC}"
+    echo -e "${YELLOW}[DEBUG] Method 1 - gh pr view (current branch):${NC}"
+    gh pr view --json number,title,body 2>&1 | head -3
+    
+    echo -e "${YELLOW}[DEBUG] Method 2 - gh pr list --head '$TARGET_BRANCH':${NC}"
+    gh pr list --head "$TARGET_BRANCH" --json number,title,body --limit 1 2>&1 | head -3
+    
+    echo -e "${YELLOW}[DEBUG] Method 3 - gh pr list --head 'origin/$TARGET_BRANCH':${NC}"
+    gh pr list --head "origin/$TARGET_BRANCH" --json number,title,body --limit 1 2>&1 | head -3
+else
+    echo -e "${YELLOW}[DEBUG] GitHub CLI not found${NC}"
+fi
+
 if get_pr_info "$TARGET_BRANCH"; then
     echo -e "${CYAN}$(msg "pr_found" "$PR_NUMBER" "$PR_TITLE")${NC}"
 else
