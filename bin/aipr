@@ -66,6 +66,7 @@ msg() {
    brew install gh  # or visit https://cli.github.com" ;;
                 "no_pr_found") echo "📍 No PR found for current branch. Creating review based on branch diff." ;;
                 "pr_found") echo "📍 Found PR #$1: $2" ;;
+                "debug_pr_search") echo "🔍 Searching for PR for branch: $1" ;;
                 "posting_comment") echo "📝 Posting review as PR comment..." ;;
                 "comment_posted") echo "✅ Review comment posted to PR successfully!" ;;
                 "comment_failed") echo "❌ Failed to post comment to PR." ;;
@@ -123,6 +124,7 @@ msg() {
    brew install gh  # 또는 https://cli.github.com 방문" ;;
                 "no_pr_found") echo "📍 현재 브랜치에 대한 PR을 찾을 수 없습니다. 브랜치 diff 기반으로 리뷰를 생성합니다." ;;
                 "pr_found") echo "📍 PR #$1 발견: $2" ;;
+                "debug_pr_search") echo "🔍 브랜치에 대한 PR 검색 중: $1" ;;
                 "posting_comment") echo "📝 PR 댓글로 리뷰를 작성 중입니다..." ;;
                 "comment_posted") echo "✅ PR에 리뷰 댓글이 성공적으로 작성되었습니다!" ;;
                 "comment_failed") echo "❌ PR 댓글 작성에 실패했습니다." ;;
@@ -341,12 +343,36 @@ fi
 get_pr_info() {
     local branch=$1
     if command -v gh >/dev/null 2>&1; then
-        # GitHub CLI로 PR 정보 가져오기
-        PR_INFO=$(gh pr view "$branch" --json number,title,body 2>/dev/null)
-        if [ $? -eq 0 ] && [ -n "$PR_INFO" ]; then
+        # 방법 1: 현재 브랜치의 PR을 직접 찾기
+        if [ "$branch" = "$(git branch --show-current)" ]; then
+            PR_INFO=$(gh pr view --json number,title,body 2>/dev/null)
+        fi
+        
+        # 방법 1이 실패하거나 다른 브랜치인 경우, head 브랜치로 검색
+        if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
+            PR_LIST=$(gh pr list --head "$branch" --json number,title,body --limit 1 2>/dev/null)
+            if [ -n "$PR_LIST" ] && [ "$PR_LIST" != "[]" ]; then
+                PR_INFO=$(echo "$PR_LIST" | sed 's/^\[\s*//' | sed 's/\s*\]$//' | head -1)
+            fi
+        fi
+        
+        # 방법 2도 실패한 경우, 원격 브랜치 이름으로 시도
+        if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
+            # origin/branch-name 형태로 시도
+            REMOTE_BRANCH="origin/$branch"
+            PR_LIST=$(gh pr list --head "$REMOTE_BRANCH" --json number,title,body --limit 1 2>/dev/null)
+            if [ -n "$PR_LIST" ] && [ "$PR_LIST" != "[]" ]; then
+                PR_INFO=$(echo "$PR_LIST" | sed 's/^\[\s*//' | sed 's/\s*\]$//' | head -1)
+            fi
+        fi
+        
+        # PR 정보 파싱
+        if [ -n "$PR_INFO" ] && [ "$PR_INFO" != "null" ] && [ "$PR_INFO" != "[]" ]; then
             PR_NUMBER=$(echo "$PR_INFO" | grep -o '"number":[0-9]*' | cut -d':' -f2)
             PR_TITLE=$(echo "$PR_INFO" | grep -o '"title":"[^"]*"' | cut -d'"' -f4)
-            return 0
+            if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "" ]; then
+                return 0
+            fi
         fi
     fi
     return 1
