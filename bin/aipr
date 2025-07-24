@@ -25,6 +25,8 @@ save_config() {
 # 언어별 메시지 함수
 msg() {
     local key=$1
+    local param1=$2
+    local param2=$3
     case "$LANGUAGE" in
         "en")
             case "$key" in
@@ -52,9 +54,9 @@ msg() {
                 "gemini_not_installed") echo "⚠️  Gemini CLI is not installed or not authenticated. Please follow these steps:
    1. Install: npm install -g @google/gemini-cli
    2. Authenticate: gemini (follow the authentication prompts)" ;;
-                "current_branch") echo "📍 Current branch: $1" ;;
+                "current_branch") echo "📍 Current branch: $param1" ;;
                 "analyzing_branch") echo "📝 Analyzing branch changes..." ;;
-                "analyzing_diff") echo "📝 Analyzing differences between $1 and $2..." ;;
+                "analyzing_diff") echo "📝 Analyzing differences between $param1 and $param2..." ;;
                 "ai_reviewing") echo "🤖 AI is reviewing the PR..." ;;
                 "ai_review_complete") echo "🎯 AI PR Review Complete:" ;;
                 "no_changes") echo "📊 No changes found between branches." ;;
@@ -66,18 +68,18 @@ msg() {
                 "gh_not_installed") echo "⚠️  GitHub CLI is not installed. Install it to enable PR integration:
    brew install gh  # or visit https://cli.github.com" ;;
                 "no_pr_found") echo "📍 No PR found for current branch. Creating review based on branch diff." ;;
-                "pr_found") echo "📍 Found PR #$1: $2" ;;
-                "debug_pr_search") echo "🔍 Searching for PR for branch: $1" ;;
+                "pr_found") echo "📍 Found PR #$param1: $param2" ;;
+                "debug_pr_search") echo "🔍 Searching for PR for branch: $param1" ;;
                 "posting_comment") echo "📝 Posting review as PR comment..." ;;
                 "comment_posted") echo "✅ Review comment posted to PR successfully!" ;;
                 "comment_failed") echo "❌ Failed to post comment to PR." ;;
                 "configure_title") echo "🌐 Language Configuration" ;;
-                "configure_current") echo "📍 Current language: $1" ;;
+                "configure_current") echo "📍 Current language: $param1" ;;
                 "configure_select") echo "🔤 Select language / 언어를 선택하세요:" ;;
                 "configure_korean") echo "  1. 한국어 (Korean)" ;;
                 "configure_english") echo "  2. English" ;;
                 "configure_prompt") echo "Enter choice (1-2): " ;;
-                "configure_success") echo "✅ Language set to: $1" ;;
+                "configure_success") echo "✅ Language set to: $param1" ;;
                 "configure_invalid") echo "❌ Invalid choice. Please select 1 or 2." ;;
                 "first_run_title") echo "🎉 Welcome to AI PR Review Assistant!" ;;
                 "first_run_subtitle") echo "First-time setup" ;;
@@ -111,9 +113,9 @@ msg() {
                 "gemini_not_installed") echo "⚠️  Gemini CLI가 설치되어 있지 않거나 인증이 완료되지 않았습니다. 다음 단계를 따라주세요:
    1. 설치: npm install -g @google/gemini-cli
    2. 인증: gemini (인증 과정을 따라 완료하세요)" ;;
-                "current_branch") echo "📍 현재 브랜치: $1" ;;
+                "current_branch") echo "📍 현재 브랜치: $param1" ;;
                 "analyzing_branch") echo "📝 브랜치 변경사항을 분석합니다..." ;;
-                "analyzing_diff") echo "📝 $1과 $2 간의 차이점을 분석합니다..." ;;
+                "analyzing_diff") echo "📝 $param1과 $param2 간의 차이점을 분석합니다..." ;;
                 "ai_reviewing") echo "🤖 AI가 PR을 리뷰 중입니다..." ;;
                 "ai_review_complete") echo "🎯 AI PR 리뷰 완료:" ;;
                 "no_changes") echo "📊 브랜치 간 변경사항이 없습니다." ;;
@@ -125,18 +127,18 @@ msg() {
                 "gh_not_installed") echo "⚠️  GitHub CLI가 설치되어 있지 않습니다. PR 연동을 위해 설치해주세요:
    brew install gh  # 또는 https://cli.github.com 방문" ;;
                 "no_pr_found") echo "📍 현재 브랜치에 대한 PR을 찾을 수 없습니다. 브랜치 diff 기반으로 리뷰를 생성합니다." ;;
-                "pr_found") echo "📍 PR #$1 발견: $2" ;;
-                "debug_pr_search") echo "🔍 브랜치에 대한 PR 검색 중: $1" ;;
+                "pr_found") echo "📍 PR #$param1 발견: $param2" ;;
+                "debug_pr_search") echo "🔍 브랜치에 대한 PR 검색 중: $param1" ;;
                 "posting_comment") echo "📝 PR 댓글로 리뷰를 작성 중입니다..." ;;
                 "comment_posted") echo "✅ PR에 리뷰 댓글이 성공적으로 작성되었습니다!" ;;
                 "comment_failed") echo "❌ PR 댓글 작성에 실패했습니다." ;;
                 "configure_title") echo "🌐 언어 설정" ;;
-                "configure_current") echo "📍 현재 언어: $1" ;;
+                "configure_current") echo "📍 현재 언어: $param1" ;;
                 "configure_select") echo "🔤 언어를 선택하세요 / Select language:" ;;
                 "configure_korean") echo "  1. 한국어 (Korean)" ;;
                 "configure_english") echo "  2. English" ;;
                 "configure_prompt") echo "선택하세요 (1-2): " ;;
-                "configure_success") echo "✅ 언어가 설정되었습니다: $1" ;;
+                "configure_success") echo "✅ 언어가 설정되었습니다: $param1" ;;
                 "configure_invalid") echo "❌ 잘못된 선택입니다. 1 또는 2를 선택해주세요." ;;
                 "first_run_title") echo "🎉 AI PR Review Assistant에 오신 것을 환영합니다!" ;;
                 "first_run_subtitle") echo "최초 설정" ;;
@@ -292,13 +294,13 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --version|-v)
-            echo "gemini-pr-review-assistant v1.1.2"
+            echo "gemini-pr-review-assistant v1.1.3"
             echo "AI-powered PR review and analysis using Gemini CLI"
             echo ""
             echo "Dependencies:"
             echo "  - Node.js >=16.0.0"
-            echo "  - @google/gemini-cli >=0.1.0"
-            echo "  - gh (GitHub CLI) - optional for PR integration"
+            echo "  - @google/gemini-cli >=0.1.0 (required)"
+            echo "  - gh (GitHub CLI) - optional for PR integration & comments"
             echo ""
             echo "Repository: https://github.com/geonhwiii/gemini-pr-review-assistant"
             echo "npm: https://www.npmjs.com/package/gemini-pr-review-assistant"
