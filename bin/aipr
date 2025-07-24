@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Gemini API를 사용한 AI PR 리뷰 및 분석 도구
+# Gemini API를 사용한 AI PR 리뷰 및 분석 도구 (GitHub PR 연동)
 
 # 설정 파일 위치
 CONFIG_FILE="$HOME/.gemini-pr-review-config.json"
@@ -33,15 +33,18 @@ msg() {
                 "help_review") echo "  aipr                    # Review current branch PR" ;;
                 "help_branch") echo "  aipr <branch>           # Review specific branch PR" ;;
                 "help_diff") echo "  aipr --diff <base>      # Compare with specific base branch" ;;
+                "help_post") echo "  aipr --post-comment     # Post review as PR comment" ;;
                 "help_options") echo "Options:" ;;
                 "help_branch_desc") echo "  <branch>                # Target branch to review" ;;
                 "help_diff_desc") echo "  --diff <base>           # Compare with base branch (default: main)" ;;
+                "help_post_desc") echo "  --post-comment          # Post AI review as GitHub PR comment" ;;
                 "help_configure_desc") echo "  --configure             # Configure language settings" ;;
                 "help_help_desc") echo "  --help, -h              # Show help" ;;
                 "help_example") echo "Examples:" ;;
                 "help_example_current") echo "  aipr                    # Review current branch" ;;
                 "help_example_branch") echo "  aipr feature/login      # Review feature/login branch" ;;
                 "help_example_diff") echo "  aipr --diff develop     # Compare current branch with develop" ;;
+                "help_example_post") echo "  aipr --post-comment     # Review and post comment to PR" ;;
                 "unknown_option") echo "❌ Unknown option:" ;;
                 "usage_help") echo "Usage: aipr [branch] [--diff base] [--configure] [--help|-h]" ;;
                 "not_git_repo") echo "❌ Not a Git repository." ;;
@@ -59,6 +62,13 @@ msg() {
                 "performance_issues") echo "⚡ Performance Issues:" ;;
                 "code_quality") echo "✨ Code Quality:" ;;
                 "suggestions") echo "💡 Suggestions:" ;;
+                "gh_not_installed") echo "⚠️  GitHub CLI is not installed. Install it to enable PR integration:
+   brew install gh  # or visit https://cli.github.com" ;;
+                "no_pr_found") echo "📍 No PR found for current branch. Creating review based on branch diff." ;;
+                "pr_found") echo "📍 Found PR #$1: $2" ;;
+                "posting_comment") echo "📝 Posting review as PR comment..." ;;
+                "comment_posted") echo "✅ Review comment posted to PR successfully!" ;;
+                "comment_failed") echo "❌ Failed to post comment to PR." ;;
                 "configure_title") echo "🌐 Language Configuration" ;;
                 "configure_current") echo "📍 Current language: $1" ;;
                 "configure_select") echo "🔤 Select language / 언어를 선택하세요:" ;;
@@ -80,15 +90,18 @@ msg() {
                 "help_review") echo "  aipr                    # 현재 브랜치 PR 리뷰" ;;
                 "help_branch") echo "  aipr <브랜치>           # 특정 브랜치 PR 리뷰" ;;
                 "help_diff") echo "  aipr --diff <베이스>    # 특정 베이스 브랜치와 비교" ;;
+                "help_post") echo "  aipr --post-comment     # 리뷰를 PR 댓글로 작성" ;;
                 "help_options") echo "옵션:" ;;
                 "help_branch_desc") echo "  <브랜치>                # 리뷰할 대상 브랜치" ;;
                 "help_diff_desc") echo "  --diff <베이스>         # 베이스 브랜치와 비교 (기본값: main)" ;;
+                "help_post_desc") echo "  --post-comment          # AI 리뷰를 GitHub PR 댓글로 작성" ;;
                 "help_configure_desc") echo "  --configure             # 언어 설정 변경" ;;
                 "help_help_desc") echo "  --help, -h              # 도움말 표시" ;;
                 "help_example") echo "예시:" ;;
                 "help_example_current") echo "  aipr                    # 현재 브랜치 리뷰" ;;
                 "help_example_branch") echo "  aipr feature/login      # feature/login 브랜치 리뷰" ;;
                 "help_example_diff") echo "  aipr --diff develop     # 현재 브랜치와 develop 비교" ;;
+                "help_example_post") echo "  aipr --post-comment     # 리뷰하고 PR에 댓글 작성" ;;
                 "unknown_option") echo "❌ 알 수 없는 옵션:" ;;
                 "usage_help") echo "사용법: aipr [브랜치] [--diff 베이스] [--configure] [--help|-h]" ;;
                 "not_git_repo") echo "❌ Git 저장소가 아닙니다." ;;
@@ -106,6 +119,13 @@ msg() {
                 "performance_issues") echo "⚡ 성능 이슈:" ;;
                 "code_quality") echo "✨ 코드 품질:" ;;
                 "suggestions") echo "💡 제안사항:" ;;
+                "gh_not_installed") echo "⚠️  GitHub CLI가 설치되어 있지 않습니다. PR 연동을 위해 설치해주세요:
+   brew install gh  # 또는 https://cli.github.com 방문" ;;
+                "no_pr_found") echo "📍 현재 브랜치에 대한 PR을 찾을 수 없습니다. 브랜치 diff 기반으로 리뷰를 생성합니다." ;;
+                "pr_found") echo "📍 PR #$1 발견: $2" ;;
+                "posting_comment") echo "📝 PR 댓글로 리뷰를 작성 중입니다..." ;;
+                "comment_posted") echo "✅ PR에 리뷰 댓글이 성공적으로 작성되었습니다!" ;;
+                "comment_failed") echo "❌ PR 댓글 작성에 실패했습니다." ;;
                 "configure_title") echo "🌐 언어 설정" ;;
                 "configure_current") echo "📍 현재 언어: $1" ;;
                 "configure_select") echo "🔤 언어를 선택하세요 / Select language:" ;;
@@ -236,10 +256,13 @@ NC='\033[0m'
 # 설정 로드
 load_config
 
-# 플래그 변수 초기화
+# 플래g 변수 초기화  
 TARGET_BRANCH=""
 BASE_BRANCH="main"
 DIFF_MODE=false
+POST_COMMENT=false
+PR_NUMBER=""
+PR_TITLE=""
 
 # 인자 처리
 while [[ $# -gt 0 ]]; do
@@ -260,6 +283,10 @@ while [[ $# -gt 0 ]]; do
                 shift
             fi
             ;;
+        --post-comment)
+            POST_COMMENT=true
+            shift
+            ;;
         --help|-h)
             # --help는 언어 설정과 관계없이 기본 도움말 표시
             echo -e "${BOLD}🔍 AI PR Review CLI - AI-powered pull request review and analysis${NC}"
@@ -268,10 +295,12 @@ while [[ $# -gt 0 ]]; do
             echo -e "  aipr                    # Review current branch PR"
             echo -e "  aipr <branch>           # Review specific branch PR"
             echo -e "  aipr --diff <base>      # Compare with specific base branch"
+            echo -e "  aipr --post-comment     # Post review as PR comment"
             echo ""
             echo -e "${CYAN}Options:${NC}"
             echo -e "  <branch>                # Target branch to review"
             echo -e "  --diff <base>           # Compare with base branch (default: main)"
+            echo -e "  --post-comment          # Post AI review as GitHub PR comment"
             echo -e "  --configure             # Configure language settings"
             echo -e "  --help, -h              # Show help"
             echo ""
@@ -279,12 +308,13 @@ while [[ $# -gt 0 ]]; do
             echo -e "  aipr                    # Review current branch"
             echo -e "  aipr feature/login      # Review feature/login branch"
             echo -e "  aipr --diff develop     # Compare current branch with develop"
+            echo -e "  aipr --post-comment     # Review and post comment to PR"
             echo ""
             exit 0
             ;;
         -*)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo -e "Usage: aipr [branch] [--diff base] [--configure] [--help|-h]"
+            echo -e "Usage: aipr [branch] [--diff base] [--post-comment] [--configure] [--help|-h]"
             exit 1
             ;;
         *)
@@ -307,10 +337,56 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     exit 1
 fi
 
+# GitHub PR 정보 가져오기 함수
+get_pr_info() {
+    local branch=$1
+    if command -v gh >/dev/null 2>&1; then
+        # GitHub CLI로 PR 정보 가져오기
+        PR_INFO=$(gh pr view "$branch" --json number,title,body 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$PR_INFO" ]; then
+            PR_NUMBER=$(echo "$PR_INFO" | grep -o '"number":[0-9]*' | cut -d':' -f2)
+            PR_TITLE=$(echo "$PR_INFO" | grep -o '"title":"[^"]*"' | cut -d'"' -f4)
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# PR에 댓글 작성 함수
+post_pr_comment() {
+    local review_content="$1"
+    if [ -n "$PR_NUMBER" ] && command -v gh >/dev/null 2>&1; then
+        echo -e "${CYAN}$(msg "posting_comment")${NC}"
+        
+        # 마크다운 형식으로 리뷰 포맷팅
+        local formatted_review="## 🤖 AI Code Review
+
+$review_content
+
+---
+*Generated by [gemini-pr-review-assistant](https://www.npmjs.com/package/gemini-pr-review-assistant)*"
+        
+        if gh pr comment "$PR_NUMBER" --body "$formatted_review" >/dev/null 2>&1; then
+            echo -e "${GREEN}$(msg "comment_posted")${NC}"
+            return 0
+        else
+            echo -e "${RED}$(msg "comment_failed")${NC}"
+            return 1
+        fi
+    fi
+    return 1
+}
+
 # Gemini CLI 설치 확인
 if ! command -v gemini >/dev/null 2>&1; then
     echo -e "${YELLOW}$(msg "gemini_not_installed")${NC}"
     exit 1
+fi
+
+# GitHub CLI 설치 확인 (옵션)
+if [ "$POST_COMMENT" = true ] && ! command -v gh >/dev/null 2>&1; then
+    echo -e "${YELLOW}$(msg "gh_not_installed")${NC}"
+    echo ""
 fi
 
 # 현재 브랜치 확인
@@ -320,6 +396,13 @@ if [ -z "$TARGET_BRANCH" ]; then
 fi
 
 echo -e "${CYAN}$(msg "current_branch" "$TARGET_BRANCH")${NC}"
+
+# PR 정보 가져오기 시도
+if get_pr_info "$TARGET_BRANCH"; then
+    echo -e "${CYAN}$(msg "pr_found" "$PR_NUMBER" "$PR_TITLE")${NC}"
+else
+    echo -e "${YELLOW}$(msg "no_pr_found")${NC}"
+fi
 
 # 차이점 분석
 if [ "$DIFF_MODE" = true ]; then
@@ -341,11 +424,19 @@ COMMIT_LOG=$(git log "$BASE_BRANCH".."$TARGET_BRANCH" --oneline --no-merges | he
 FILE_CHANGES=$(git diff --name-status "$BASE_BRANCH".."$TARGET_BRANCH")
 
 # 언어별 Gemini 프롬프트 생성
+PR_INFO_TEXT=""
+if [ -n "$PR_NUMBER" ]; then
+    PR_INFO_TEXT="PR #$PR_NUMBER: $PR_TITLE"
+else
+    PR_INFO_TEXT="Branch comparison (no PR found)"
+fi
+
 if [ "$LANGUAGE" = "en" ]; then
     REVIEW_PROMPT="You are an expert code reviewer. Analyze this pull request and provide a comprehensive review.
 
 PULL REQUEST ANALYSIS:
 
+$PR_INFO_TEXT
 Target Branch: $TARGET_BRANCH
 Base Branch: $BASE_BRANCH
 
@@ -373,6 +464,7 @@ else
 
 풀 리퀘스트 분석:
 
+$PR_INFO_TEXT
 대상 브랜치: $TARGET_BRANCH
 베이스 브랜치: $BASE_BRANCH
 
@@ -429,6 +521,20 @@ if [ $GEMINI_EXIT_CODE -eq 0 ]; then
     echo -e "${BOLD}$AI_REVIEW${NC}"
     echo ""
     echo -e "${BLUE}============================================================${NC}"
+    
+    # PR 댓글 작성 (요청된 경우)
+    if [ "$POST_COMMENT" = true ]; then
+        if [ -n "$PR_NUMBER" ] && command -v gh >/dev/null 2>&1; then
+            echo ""
+            post_pr_comment "$AI_REVIEW"
+        else
+            if [ -z "$PR_NUMBER" ]; then
+                echo -e "${YELLOW}⚠️  No PR found for current branch. Cannot post comment.${NC}"
+            elif ! command -v gh >/dev/null 2>&1; then
+                echo -e "${YELLOW}$(msg "gh_not_installed")${NC}"
+            fi
+        fi
+    fi
 else
     echo -e "${RED}Failed to get AI review. Exit code: $GEMINI_EXIT_CODE${NC}"
     exit 1

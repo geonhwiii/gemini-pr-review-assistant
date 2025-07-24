@@ -9,6 +9,8 @@ Gemini PR Review Assistant is a command-line tool that leverages Google's Gemini
 ## ✨ Features
 
 - 🤖 **AI-Powered Reviews**: Uses Gemini 2.5 Flash for intelligent code analysis
+- 🔗 **GitHub PR Integration**: Automatically detects and analyzes actual pull requests
+- 💬 **PR Comment Integration**: Posts review results directly as PR comments
 - 🔒 **Security Analysis**: Identifies potential security vulnerabilities
 - ⚡ **Performance Insights**: Highlights performance issues and optimization opportunities
 - 🎯 **Code Quality Assessment**: Evaluates code structure, readability, and maintainability
@@ -25,6 +27,12 @@ Gemini PR Review Assistant is a command-line tool that leverages Google's Gemini
    ```bash
    npm install -g @google/gemini-cli
    gemini # Follow authentication prompts
+   ```
+3. **GitHub CLI** (optional, for PR integration):
+   ```bash
+   brew install gh  # macOS
+   # or visit https://cli.github.com for other platforms
+   gh auth login    # Authenticate with GitHub
    ```
 
 ### Install PR Review Assistant
@@ -47,6 +55,9 @@ aipr feature/login
 # Compare with specific base branch
 aipr --diff develop
 
+# Review and post comment to PR
+aipr --post-comment
+
 # Configure language settings
 aipr --configure
 
@@ -66,8 +77,11 @@ aipr feature/user-auth
 # Compare current branch with develop
 aipr --diff develop
 
-# Review specific branch against specific base
-aipr feature/payments --diff staging
+# Review and automatically post to PR
+aipr --post-comment
+
+# Review specific branch and post comment
+aipr feature/payments --post-comment
 ```
 
 ## 🎯 Review Categories
