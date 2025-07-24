@@ -39,6 +39,7 @@ msg() {
                 "help_diff_desc") echo "  --diff <base>           # Compare with base branch (default: main)" ;;
                 "help_post_desc") echo "  --post-comment          # Post AI review as GitHub PR comment" ;;
                 "help_configure_desc") echo "  --configure             # Configure language settings" ;;
+                "help_version_desc") echo "  --version, -v           # Show version information" ;;
                 "help_help_desc") echo "  --help, -h              # Show help" ;;
                 "help_example") echo "Examples:" ;;
                 "help_example_current") echo "  aipr                    # Review current branch" ;;
@@ -97,6 +98,7 @@ msg() {
                 "help_diff_desc") echo "  --diff <베이스>         # 베이스 브랜치와 비교 (기본값: main)" ;;
                 "help_post_desc") echo "  --post-comment          # AI 리뷰를 GitHub PR 댓글로 작성" ;;
                 "help_configure_desc") echo "  --configure             # 언어 설정 변경" ;;
+                "help_version_desc") echo "  --version, -v           # 버전 정보 표시" ;;
                 "help_help_desc") echo "  --help, -h              # 도움말 표시" ;;
                 "help_example") echo "예시:" ;;
                 "help_example_current") echo "  aipr                    # 현재 브랜치 리뷰" ;;
@@ -289,6 +291,19 @@ while [[ $# -gt 0 ]]; do
             POST_COMMENT=true
             shift
             ;;
+        --version|-v)
+            echo "gemini-pr-review-assistant v1.1.2"
+            echo "AI-powered PR review and analysis using Gemini CLI"
+            echo ""
+            echo "Dependencies:"
+            echo "  - Node.js >=16.0.0"
+            echo "  - @google/gemini-cli >=0.1.0"
+            echo "  - gh (GitHub CLI) - optional for PR integration"
+            echo ""
+            echo "Repository: https://github.com/geonhwiii/gemini-pr-review-assistant"
+            echo "npm: https://www.npmjs.com/package/gemini-pr-review-assistant"
+            exit 0
+            ;;
         --help|-h)
             # --help는 언어 설정과 관계없이 기본 도움말 표시
             echo -e "${BOLD}🔍 AI PR Review CLI - AI-powered pull request review and analysis${NC}"
@@ -304,6 +319,7 @@ while [[ $# -gt 0 ]]; do
             echo -e "  --diff <base>           # Compare with base branch (default: main)"
             echo -e "  --post-comment          # Post AI review as GitHub PR comment"
             echo -e "  --configure             # Configure language settings"
+            echo -e "  --version, -v           # Show version information"
             echo -e "  --help, -h              # Show help"
             echo ""
             echo -e "${CYAN}Examples:${NC}"
@@ -316,7 +332,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -*)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo -e "Usage: aipr [branch] [--diff base] [--post-comment] [--configure] [--help|-h]"
+            echo -e "Usage: aipr [branch] [--diff base] [--post-comment] [--configure] [--version|-v] [--help|-h]"
             exit 1
             ;;
         *)
@@ -417,9 +433,31 @@ fi
 
 # 현재 브랜치 확인
 if [ -z "$TARGET_BRANCH" ]; then
-    CURRENT_BRANCH=$(git branch --show-current)
+    # 방법 1: git branch --show-current (Git 2.22+)
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null)
+    
+    # 방법 1이 실패한 경우 방법 2: git rev-parse (더 호환성 있음)
+    if [ -z "$CURRENT_BRANCH" ]; then
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    fi
+    
+    # 방법 2도 실패한 경우 방법 3: git branch
+    if [ -z "$CURRENT_BRANCH" ]; then
+        CURRENT_BRANCH=$(git branch 2>/dev/null | grep "^\*" | cut -d' ' -f2-)
+    fi
+    
+    # 모든 방법이 실패한 경우 기본값
+    if [ -z "$CURRENT_BRANCH" ]; then
+        CURRENT_BRANCH="unknown-branch"
+    fi
+    
     TARGET_BRANCH="$CURRENT_BRANCH"
 fi
+
+# DEBUG: 브랜치 정보 출력
+echo -e "${YELLOW}[DEBUG] TARGET_BRANCH value: '$TARGET_BRANCH'${NC}"
+echo -e "${YELLOW}[DEBUG] git branch --show-current: '$(git branch --show-current 2>/dev/null)'${NC}"
+echo -e "${YELLOW}[DEBUG] git rev-parse --abbrev-ref HEAD: '$(git rev-parse --abbrev-ref HEAD 2>/dev/null)'${NC}"
 
 echo -e "${CYAN}$(msg "current_branch" "$TARGET_BRANCH")${NC}"
 
