@@ -1,0 +1,49 @@
+{
+  "name": "gemini-pr-review-assistant",
+  "version": "1.0.0",
+  "description": "AI-powered PR review and analysis using Gemini CLI",
+  "main": "index.js",
+  "bin": {
+    "aipr": "./bin/aipr",
+    "ai-pr-review": "./bin/aipr"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "chmod +x bin/aipr && chmod +x bin/postinstall.js",
+    "postinstall": "node bin/postinstall.js"
+  },
+  "keywords": [
+    "git",
+    "pr",
+    "pull-request",
+    "review",
+    "ai",
+    "gemini",
+    "cli",
+    "automation",
+    "developer-tools",
+    "code-review"
+  ],
+  "author": "C17AN",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "peerDependencies": {
+    "@google/gemini-cli": ">=0.1.0"
+  },
+  "files": [
+    "bin/aipr",
+    "bin/postinstall.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geonhwiii/gemini-pr-review-assistant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/geonhwiii/gemini-pr-review-assistant/issues"
+  },
+  "homepage": "https://github.com/geonhwiii/gemini-pr-review-assistant#readme"
+}
